@@ -54,7 +54,7 @@ export class AuthService {
 
         //If user does not exist, throw exception
         if (!user) {
-            throw new ForbiddenException('Credentials incorrect');
+            throw new ForbiddenException('Credentials incorrect: email');
         }
 
         //Compare password
@@ -65,7 +65,7 @@ export class AuthService {
 
         //If password incorrect, throw exception
         if (!pwMatches) {
-            throw new ForbiddenException('Credentials incorrect');
+            throw new ForbiddenException('Credentials incorrect: password');
         }
 
         const { password, ...userWithoutPassword } = user;
