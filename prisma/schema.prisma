@@ -24,18 +24,22 @@ model User {
   firstname String?
   lastname  String?
 
-  attendances attendance[]
+  attendances Attendance[]
   @@map("users")
 }
 
-model attendance {
+model Attendance {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   userId    Int
+
+  //attenance details
   date      DateTime
   status    String
+  latitude  Float
+  longitude Float
 
   user      User     @relation(fields: [userId], references: [id])
   @@map("attendances")
