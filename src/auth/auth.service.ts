@@ -3,10 +3,15 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { signInDto, signUpDto } from './dto';
 import * as argon2 from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-    constructor(private prisma:PrismaService) {}
+    constructor(private prisma:PrismaService
+        , private jwt: JwtService
+        , private config: ConfigService
+    ) {}
     // signup
     async signup(dto: signUpDto) {
         console.log(dto);
@@ -23,11 +28,8 @@ export class AuthService {
                 },
             });
 
-            console.log(user);
-            const { password, ...userWithoutPassword } = user;
-
-            //Return the saved user
-            return userWithoutPassword;
+            //Send back the user sign token
+            return this.signToken(user.id, user.email);
         }
         catch (error) {
             //If there is a error, throw it
@@ -68,9 +70,21 @@ export class AuthService {
             throw new ForbiddenException('Credentials incorrect: password');
         }
 
-        const { password, ...userWithoutPassword } = user;
+        //Send back the user sign token
+        return this.signToken(user.id, user.email);
+    }
 
-        //Send back the user
-        return userWithoutPassword;
+    async signToken(userId: number, email: string): Promise<{ access_token: string }> {
+        const payload = {
+            sub: userId,
+            email,
+        };
+        const token = await this.jwt.signAsync(payload, {
+            expiresIn: this.config.get('JWT_EXPIRES_IN'),
+            secret: this.config.get('JWT_SECRET'),
+        });
+        return { 
+            access_token: token 
+        }
     }
 }
