@@ -8,7 +8,7 @@ import type { User } from 'generated/prisma';
 export class UserController {
 
   @Get('me')
-  getMe(@GetUser() user: User, @GetUser('email') email: string) {
-    return user;
+  getMe(@GetUser() user: User) {
+    return user.id;
   }
 }

@@ -8,9 +8,15 @@ import { ConfigModule } from '@nestjs/config';
 import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    isGlobal: true,
-  }), AuthModule, UserModule, PrismaModule, AttendanceModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    AuthModule,
+    UserModule,
+    PrismaModule,
+    AttendanceModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
