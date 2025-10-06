@@ -28,8 +28,17 @@ export class AuthService {
                 },
             });
 
-            //Send back the user sign token
-            return this.signToken(user.id, user.email, user.role);
+            //Send back message
+            return {
+                message: 'Signup successful. Please log in to continue.',
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstname: user.firstname,
+                    lastname: user.lastname,
+                    role: user.role,
+                },
+            };
         }
         catch (error) {
             //If there is a error, throw it
@@ -40,7 +49,7 @@ export class AuthService {
                     );
                 }
             }
-            return { msg: 'Something went wrong' };
+            return { msg: 'Something went wrong, try again!' };
         }
 
     }
