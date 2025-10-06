@@ -24,6 +24,8 @@ model User {
   firstname String?
   lastname  String?
 
+  role      String   @default("USER")
+
   attendances Attendance[]
   @@map("users")
 }

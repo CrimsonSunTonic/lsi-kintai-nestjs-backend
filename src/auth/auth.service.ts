@@ -29,7 +29,7 @@ export class AuthService {
             });
 
             //Send back the user sign token
-            return this.signToken(user.id, user.email);
+            return this.signToken(user.id, user.email, user.role);
         }
         catch (error) {
             //If there is a error, throw it
@@ -71,13 +71,14 @@ export class AuthService {
         }
 
         //Send back the user sign token
-        return this.signToken(user.id, user.email);
+        return this.signToken(user.id, user.email, user.role);
     }
 
-    async signToken(userId: number, email: string): Promise<{ access_token: string }> {
+    async signToken(userId: number, email: string, role: string): Promise<{ access_token: string }> {
         const payload = {
             sub: userId,
             email,
+            role
         };
         const token = await this.jwt.signAsync(payload, {
             expiresIn: this.config.get('JWT_EXPIRES_IN'),
