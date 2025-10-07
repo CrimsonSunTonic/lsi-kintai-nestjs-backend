@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Req, UseGuards, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus, Query, ForbiddenException } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { JwtGuard } from '../auth/guard';
 import { GetUser } from '../auth/decorator';
 import { CreateAttendanceDto } from './dto';
+import { GetMonthlyAttendanceDto } from './dto/get.attendance.monthly.dto';
 
 @UseGuards(JwtGuard)
 @Controller('attendance')
@@ -24,4 +25,19 @@ export class AttendanceController {
     return this.attendanceService.getUserAttendance(userId);
   }
 
+  // 🔒 Admin-only endpoint
+  @HttpCode(HttpStatus.OK)
+  @Get('monthly')
+  async getMonthlyAttendance(
+    @GetUser() user: any, // Contains id, email, role, etc.
+    @Body() dto: GetMonthlyAttendanceDto,
+  ) {
+    if (user.role !== 'ADMIN') {
+      throw new
+       ForbiddenException('Access denied. Admins only.');
+    }
+
+    console.log('dto:', dto);
+    return this.attendanceService.getMonthlyAttendance(dto);
+  }
 }
