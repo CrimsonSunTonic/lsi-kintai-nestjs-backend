@@ -1,0 +1,14 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "lsi_kintaikanri_render",
+            "Group": "Servers",
+            "Host": "dpg-d3iue9ggjchc73ek4qtg-a.singapore-postgres.render.com",
+            "Port": 5432,
+            "Username": "lsi_db_user",
+            "Password": "x4cNgh8SlT1FlLFUrIFe1fPOdENdYx2g",
+            "Database": "lsi_kintai_test_db",
+            "MaintenanceDB": "postgres"
+        }
+    }
+}

@@ -25,5 +25,16 @@ services:
       - lsib-network
     volumes:
       - ./db-data-test:/var/lib/postgresql/data
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@email.com
+      PGADMIN_DEFAULT_PASSWORD: adminpass
+    ports:
+      - "8080:80"
+    volumes:
+      - ./pgadmin4/server.json:/pgadmin4/servers.json
 networks:
   lsib-network:
