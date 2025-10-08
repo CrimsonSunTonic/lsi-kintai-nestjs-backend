@@ -12,6 +12,8 @@ export class AttendanceService {
       new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
     );
 
+    console.log("nowJST >>>> ", nowJST);
+
     return this.prisma.attendance.create({
       data: {
         userId,
