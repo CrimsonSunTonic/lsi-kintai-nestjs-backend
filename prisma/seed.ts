@@ -51,18 +51,19 @@ async function seedAttendance() {
       const day = current.getDay(); // 0 = Sunday, 1 = Monday, 2 = Tuesday, ..., 6 = Saturday
       if (day !== 0 && day !== 6) {
         const checkIn = new Date(current);
-        checkIn.setHours(9, 0, 0, 0);
+        // Set time to 9:00 JST (UTC+9)
+        checkIn.setUTCHours(0, 0, 0, 0); // 9:00 JST = 0:00 UTC
 
         const checkOut = new Date(current);
         if (day === 1) {
-          // Monday
-          checkOut.setHours(21, 0, 0, 0);
+          // Monday: 21:00 JST = 12:00 UTC
+          checkOut.setUTCHours(12, 0, 0, 0);
         } else if (day === 2) {
-          // Tuesday
-          checkOut.setHours(23, 0, 0, 0);
+          // Tuesday: 23:00 JST = 14:00 UTC
+          checkOut.setUTCHours(14, 0, 0, 0);
         } else {
-          // Other weekdays
-          checkOut.setHours(18, 0, 0, 0);
+          // Other weekdays: 18:00 JST = 9:00 UTC
+          checkOut.setUTCHours(9, 0, 0, 0);
         }
 
         records.push({
