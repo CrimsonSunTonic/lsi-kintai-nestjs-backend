@@ -8,13 +8,12 @@ export class AttendanceService {
   constructor(private prisma: PrismaService) {}
 
   async createAttendance(userId: number, dto: CreateAttendanceDto) {
-    const nowJST = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
-    );
+    const now = new Date();
+    const nowJST = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    console.log(nowJST.toISOString());
 
-    console.log("nowJST >>>> ", nowJST);
-
-    return this.prisma.attendance.create({
+    ////Save the attendance record
+    const savedRecord = await this.prisma.attendance.create({
       data: {
         userId,
         date: nowJST,
@@ -23,6 +22,11 @@ export class AttendanceService {
         longitude: dto.longitude,
       },
     });
+
+    return {
+      message: 'Attendance recorded successfully',
+      ...savedRecord,
+    }
   }
 
   async getUserAttendance(userId: number) {
