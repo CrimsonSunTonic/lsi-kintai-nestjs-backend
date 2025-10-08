@@ -27,7 +27,7 @@ export class AttendanceController {
 
   // 🔒 Admin-only endpoint
   @HttpCode(HttpStatus.OK)
-  @Get('monthly')
+  @Post('monthly')
   async getMonthlyAttendance(
     @GetUser() user: any, // Contains id, email, role, etc.
     @Body() dto: GetMonthlyAttendanceDto,
@@ -37,7 +37,6 @@ export class AttendanceController {
        ForbiddenException('Access denied. Admins only.');
     }
 
-    console.log('dto:', dto);
     return this.attendanceService.getMonthlyAttendance(dto);
   }
 }

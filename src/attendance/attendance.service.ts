@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAttendanceDto } from './dto';
 import { GetMonthlyAttendanceDto } from './dto/get.attendance.monthly.dto';
@@ -10,25 +10,28 @@ export class AttendanceService {
   async createAttendance(userId: number, dto: CreateAttendanceDto) {
     const today = new Date();
 
-    // Get start and end of today
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    // // Get start and end of today
+    // const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    // const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
-    // Check if user already checked in or out today
-    const existingRecord = await this.prisma.attendance.findFirst({
-      where: {
-        userId,
-        status: dto.status, // checkin OR checkout
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
-    });
+    // // Check if user already checked in or out today
+    // const existingRecord = await this.prisma.attendance.findFirst({
+    //   where: {
+    //     userId,
+    //     status: dto.status, // checkin OR checkout
+    //     date: {
+    //       gte: startOfDay,
+    //       lte: endOfDay,
+    //     },
+    //   },
+    // });
 
-    if (existingRecord) {
-      throw new Error(`You have already ${dto.status} today.`);
-    }
+    // if (existingRecord) {
+    //   throw new HttpException(
+    //     `You have already ${dto.status} today.`,
+    //     HttpStatus.CONFLICT,
+    //   );
+    // }
 
     // ✅ If not, create the record
     return this.prisma.attendance.create({
