@@ -48,13 +48,22 @@ async function seedAttendance() {
     let current = new Date(start);
 
     while (current <= end) {
-      const day = current.getDay(); // 0 = Sunday, 6 = Saturday
+      const day = current.getDay(); // 0 = Sunday, 1 = Monday, 2 = Tuesday, ..., 6 = Saturday
       if (day !== 0 && day !== 6) {
         const checkIn = new Date(current);
         checkIn.setHours(9, 0, 0, 0);
 
         const checkOut = new Date(current);
-        checkOut.setHours(18, 0, 0, 0);
+        if (day === 1) {
+          // Monday
+          checkOut.setHours(21, 0, 0, 0);
+        } else if (day === 2) {
+          // Tuesday
+          checkOut.setHours(23, 0, 0, 0);
+        } else {
+          // Other weekdays
+          checkOut.setHours(18, 0, 0, 0);
+        }
 
         records.push({
           userId: user.id,
