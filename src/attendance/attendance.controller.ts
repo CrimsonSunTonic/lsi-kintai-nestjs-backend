@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus, ForbiddenException, Req } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { JwtGuard } from '../auth/guard';
 import { GetUser } from '../auth/decorator';
@@ -33,10 +33,15 @@ export class AttendanceController {
     @Body() dto: GetMonthlyAttendanceDto,
   ) {
     if (user.role !== 'ADMIN') {
-      throw new
-       ForbiddenException('Access denied. Admins only.');
+      throw new ForbiddenException('Access denied. Admins only.');
     }
 
     return this.attendanceService.getMonthlyAttendance(dto);
+  }
+
+  @Get('status')
+  async getTodayStatus(@Req() req) {
+    const userId = req.user.id;
+    return this.attendanceService.getTodayStatus(userId);
   }
 }

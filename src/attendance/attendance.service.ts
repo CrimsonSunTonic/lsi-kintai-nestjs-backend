@@ -8,36 +8,14 @@ export class AttendanceService {
   constructor(private prisma: PrismaService) {}
 
   async createAttendance(userId: number, dto: CreateAttendanceDto) {
-    const today = new Date();
+    const nowJST = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
+    );
 
-    // // Get start and end of today
-    // const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    // const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-
-    // // Check if user already checked in or out today
-    // const existingRecord = await this.prisma.attendance.findFirst({
-    //   where: {
-    //     userId,
-    //     status: dto.status, // checkin OR checkout
-    //     date: {
-    //       gte: startOfDay,
-    //       lte: endOfDay,
-    //     },
-    //   },
-    // });
-
-    // if (existingRecord) {
-    //   throw new HttpException(
-    //     `You have already ${dto.status} today.`,
-    //     HttpStatus.CONFLICT,
-    //   );
-    // }
-
-    // ✅ If not, create the record
     return this.prisma.attendance.create({
       data: {
         userId,
-        date: today,
+        date: nowJST,
         status: dto.status,
         latitude: dto.latitude,
         longitude: dto.longitude,
@@ -68,5 +46,27 @@ export class AttendanceService {
         date: 'asc',
       },
     });
+  }
+
+  async getTodayStatus(userId: number) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const records = await this.prisma.attendance.findMany({
+      where: {
+        userId,
+        date: {
+          gte: today,
+          lt: tomorrow,
+        },
+      },
+    });
+
+    return {
+      checkedIn: records.some(r => r.status === 'checkin'),
+      checkedOut: records.some(r => r.status === 'checkout'),
+    };
   }
 }
