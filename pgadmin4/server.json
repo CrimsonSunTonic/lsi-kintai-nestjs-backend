@@ -9,6 +9,16 @@
             "Password": "x4cNgh8SlT1FlLFUrIFe1fPOdENdYx2g",
             "Database": "lsi_kintai_test_db",
             "MaintenanceDB": "postgres"
+        },
+        "2": {
+            "Name": "prisma_cloud_postgres",
+            "Group": "Servers",
+            "Host": "db.prisma.io",
+            "Port": 5432,
+            "Username": "fcfd8b94434d77397984cac7c7aba8ad4bca6ce4583e11fd0e7eb8c7ed7c9a17",
+            "Password": "sk_SQ8-lNvQbDjPZEH3J1Es8",
+            "Database": "postgres",
+            "SSLMode": "require"
         }
     }
 }
