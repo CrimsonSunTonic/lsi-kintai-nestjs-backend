@@ -27,15 +27,9 @@ async function bootstrap() {
   SwaggerModule.setup('doc', app, documentFactory);
 
   //Enable CORS for your Next.js frontend
-  // app.enableCors({
-  //   origin: configService.get('FRONTEND_URL'),
-  //   credentials: true,
-  // }); 
-
   app.enableCors({
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: false, // must be false when origin is '*'
+    origin: configService.get('FRONTEND_URL'),
+    credentials: true,
   });
 
   await app.listen(process.env.PORT ?? 4000);
