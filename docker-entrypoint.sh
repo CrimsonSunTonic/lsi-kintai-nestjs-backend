@@ -1,6 +1,5 @@
 #!/bin/sh
 
-npx prisma --version
 echo "Running migrations on dev-db..."
 npx prisma migrate deploy
 
