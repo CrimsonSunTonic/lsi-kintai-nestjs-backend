@@ -28,8 +28,8 @@ async function bootstrap() {
 
   //Enable CORS for your Next.js frontend
   app.enableCors({
-    origin: configService.get('FRONTEND_URL'),
-    credentials: true,
+    origin: true, // allow all origins
+    credentials: false, // must be false when origin is '*'
   });
 
   await app.listen(process.env.PORT ?? 4000);
