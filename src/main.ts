@@ -24,7 +24,7 @@ async function bootstrap() {
     .addTag('LSI Backend')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+  SwaggerModule.setup('doc', app, documentFactory);
 
   //Enable CORS for your Next.js frontend
   app.enableCors({
