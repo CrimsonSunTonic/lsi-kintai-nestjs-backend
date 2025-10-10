@@ -29,14 +29,19 @@ async function seedUsers() {
 }
 
 async function seedAttendance() {
-  console.log('\n🌱 Seeding attendance test data (excluding admin)...');
+  console.log('\n🌱 Seeding attendance test data (only for user1–user3)...');
 
+  // ✅ Only include the specific 3 users
   const users = await prisma.user.findMany({
-    where: { role: { not: 'ADMIN' } },
+    where: {
+      email: {
+        in: ['user1@lsi.co.jp', 'user2@lsi.co.jp', 'user3@lsi.co.jp'],
+      },
+    },
   });
 
   if (users.length === 0) {
-    console.log('⚠️ No non-admin users found. Please seed accounts first.');
+    console.log('⚠️ No target users found. Please seed accounts first.');
     return;
   }
 
