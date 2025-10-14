@@ -1,5 +1,11 @@
 #!/bin/sh
 
+echo "Generating Prisma client..."
+npx prisma generate
+
+echo "Building the NestJS application..."
+npm run build
+
 echo "Running migrations on dev-db..."
 npx prisma migrate deploy
 
