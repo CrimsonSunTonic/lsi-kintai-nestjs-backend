@@ -1,5 +1,5 @@
 import { Controller,  ForbiddenException,  Get,  Req, UseGuards } from '@nestjs/common';
-import { JwtGuard } from '../auth/guard';
+import { AdminGuard, JwtGuard } from '../auth/guard';
 import { GetUser } from '../auth/decorator';
 import type { User } from '@prisma/client';
 import { UserService } from './user.service';
@@ -20,12 +20,9 @@ export class UserController {
     };
   }
 
+  @UseGuards(AdminGuard)
   @Get('all')
   async getAllUsers(@GetUser() user: User) {
-    if (user.role !== 'ADMIN') {
-      throw new ForbiddenException('Access denied: Admins only');
-    }
-
     return this.userService.getAllUsers();
   }
 }
