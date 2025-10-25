@@ -6,30 +6,60 @@ import { AdminGuard } from 'src/auth/guard';
 @UseGuards(AdminGuard)
 @Controller('admin')
 export class AdminController {
-    constructor(private readonly adminService: AdminService) {}
+  constructor(private readonly adminService: AdminService) {}
 
-    @Post()
-    create(@Body() createUserDto: CreateUserDto) {
-        return this.adminService.create(createUserDto);
-    }
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto) {
+    console.log('=== [POST] /admin ===');
+    console.log('CreateUserDto:', createUserDto);
 
-    @Get()
-    findAll() {
-        return this.adminService.findAll();
-    }
+    const result = await this.adminService.create(createUserDto);
 
-    @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.adminService.findOne(+id);
-    }
+    console.log('Create result:', result);
+    return result;
+  }
 
-    @Patch(':id')
-    update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-        return this.adminService.update(+id, updateUserDto);
-    }
+  @Get()
+  async findAll() {
+    console.log('=== [GET] /admin ===');
 
-    @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.adminService.remove(+id);
-    }
+    const result = await this.adminService.findAll();
+
+    console.log('FindAll result:', result);
+    return result;
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    console.log('=== [GET] /admin/:id ===');
+    console.log('ID:', id);
+
+    const result = await this.adminService.findOne(+id);
+
+    console.log('FindOne result:', result);
+    return result;
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    console.log('=== [PATCH] /admin/:id ===');
+    console.log('ID:', id);
+    console.log('UpdateUserDto:', updateUserDto);
+
+    const result = await this.adminService.update(+id, updateUserDto);
+
+    console.log('Update result:', result);
+    return result;
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    console.log('=== [DELETE] /admin/:id ===');
+    console.log('ID:', id);
+
+    const result = await this.adminService.remove(+id);
+
+    console.log('Remove result:', result);
+    return result;
+  }
 }

@@ -30,11 +30,6 @@ export class UpdateUserDto {
 
   @IsString()
   @IsOptional()
-  @MinLength(8)
-  password?: string;
-
-  @IsString()
-  @IsOptional()
   firstname?: string;
 
   @IsString()

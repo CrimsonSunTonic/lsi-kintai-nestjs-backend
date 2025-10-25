@@ -10,8 +10,12 @@ export class AdminService {
 
   // Create a new user
   async create(createUserDto: CreateUserDto) {
+    console.log('=== [AdminService] create() called ===');
+    console.log('Received DTO:', createUserDto);
+
     try {
       const hashedPassword = await argon2.hash(createUserDto.password);
+      console.log('Password hashed successfully');
 
       const user = await this.prisma.user.create({
         data: {
@@ -22,6 +26,8 @@ export class AdminService {
           role: createUserDto.role,
         },
       });
+
+      console.log('User created in DB:', user);
 
       return {
         message: 'User created successfully',
@@ -34,6 +40,7 @@ export class AdminService {
         },
       };
     } catch (error) {
+      console.error('Error in create():', error);
       if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ForbiddenException('Email is already taken');
       }
@@ -43,7 +50,9 @@ export class AdminService {
 
   // Find all users
   async findAll() {
-    return this.prisma.user.findMany({
+    console.log('=== [AdminService] findAll() called ===');
+
+    const users = await this.prisma.user.findMany({
       select: {
         id: true,
         email: true,
@@ -54,10 +63,16 @@ export class AdminService {
         updatedAt: true,
       },
     });
+
+    console.log('Fetched users:', users);
+    return users;
   }
 
   // Find one user by ID
   async findOne(id: number) {
+    console.log('=== [AdminService] findOne() called ===');
+    console.log('User ID:', id);
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -71,22 +86,28 @@ export class AdminService {
       },
     });
 
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
+    if (!user) {
+      console.warn(`User with ID ${id} not found`);
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    console.log('Found user:', user);
     return user;
   }
 
   // Update user by ID
   async update(id: number, updateUserDto: UpdateUserDto) {
-    try {
-      // Hash password if provided
-      if (updateUserDto.password) {
-        updateUserDto.password = await argon2.hash(updateUserDto.password);
-      }
+    console.log('=== [AdminService] update() called ===');
+    console.log('User ID:', id);
+    console.log('Received DTO:', updateUserDto);
 
+    try {
       const user = await this.prisma.user.update({
         where: { id },
         data: updateUserDto,
       });
+
+      console.log('User updated in DB:', user);
 
       return {
         message: 'User updated successfully',
@@ -99,6 +120,7 @@ export class AdminService {
         },
       };
     } catch (error) {
+      console.error('Error in update():', error);
       if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
@@ -108,10 +130,15 @@ export class AdminService {
 
   // Remove user by ID
   async remove(id: number) {
+    console.log('=== [AdminService] remove() called ===');
+    console.log('User ID:', id);
+
     try {
       const user = await this.prisma.user.delete({
         where: { id },
       });
+
+      console.log('User deleted from DB:', user);
 
       return {
         message: 'User removed successfully',
@@ -124,6 +151,7 @@ export class AdminService {
         },
       };
     } catch (error) {
+      console.error('Error in remove():', error);
       if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
