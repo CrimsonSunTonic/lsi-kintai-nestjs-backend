@@ -27,9 +27,20 @@ async function bootstrap() {
   SwaggerModule.setup('doc', app, documentFactory);
 
   //Enable CORS for your Next.js frontend
+  const frontendUrls = configService.get<string>('FRONTEND_URLS')?.split(',') || [];
+  console.log('\n==============================');
+  console.log('✅ Allowed CORS Origins:');
+  frontendUrls.forEach((url) => console.log(' -', url));
+  console.log('==============================\n');
+  
+  app.use((req, res, next) => {
+    console.log('🌐 Request Origin:', req.headers.origin || '(none)');
+    next();
+  });
+
   app.enableCors({
-    origin: configService.get('FRONTEND_URL'), // replace with your frontend URL
-    credentials: true, // must be false when origin is '*'
+    origin: frontendUrls,
+    credentials: true,
   });
 
   console.log('\nenableCors url is: ', configService.get('FRONTEND_URL'));
