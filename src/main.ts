@@ -12,10 +12,11 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      transformOptions: { 
-        enableImplicitConversion: true 
+      transformOptions: {
+        enableImplicitConversion: true,
       },
-  }));
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('LSI Backend API')
@@ -27,12 +28,13 @@ async function bootstrap() {
   SwaggerModule.setup('doc', app, documentFactory);
 
   //Enable CORS for your Next.js frontend
-  const frontendUrls = configService.get<string>('FRONTEND_URLS')?.split(',') || [];
+  const frontendUrls =
+    configService.get<string>('FRONTEND_URLS')?.split(',') || [];
   console.log('\n==============================');
   console.log('✅ Allowed CORS Origins:');
   frontendUrls.forEach((url) => console.log(' -', url));
   console.log('==============================\n');
-  
+
   app.use((req, res, next) => {
     console.log('🌐 Request Origin:', req.headers.origin || '(none)');
     next();
@@ -42,8 +44,6 @@ async function bootstrap() {
     origin: frontendUrls,
     credentials: true,
   });
-
-  console.log('\nenableCors url is: ', configService.get('FRONTEND_URL'));
 
   await app.listen(process.env.PORT ?? 4000);
 }
