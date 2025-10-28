@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import * as argon2 from 'argon2';
@@ -27,8 +31,6 @@ export class AdminService {
         },
       });
 
-      console.log('User created in DB:', user);
-
       return {
         message: 'User created successfully',
         user: {
@@ -41,7 +43,10 @@ export class AdminService {
       };
     } catch (error) {
       console.error('Error in create():', error);
-      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ForbiddenException('Email is already taken');
       }
       throw new ForbiddenException('Something went wrong');
@@ -62,9 +67,12 @@ export class AdminService {
         createdAt: true,
         updatedAt: true,
       },
+      orderBy: [
+        { role: 'asc' },
+        { firstname: 'asc' },
+      ],
     });
 
-    console.log('Fetched users:', users);
     return users;
   }
 
@@ -107,8 +115,6 @@ export class AdminService {
         data: updateUserDto,
       });
 
-      console.log('User updated in DB:', user);
-
       return {
         message: 'User updated successfully',
         user: {
@@ -121,7 +127,10 @@ export class AdminService {
       };
     } catch (error) {
       console.error('Error in update():', error);
-      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
       throw new ForbiddenException('Something went wrong');
@@ -138,8 +147,6 @@ export class AdminService {
         where: { id },
       });
 
-      console.log('User deleted from DB:', user);
-
       return {
         message: 'User removed successfully',
         user: {
@@ -152,7 +159,10 @@ export class AdminService {
       };
     } catch (error) {
       console.error('Error in remove():', error);
-      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
       throw new ForbiddenException('Something went wrong');
