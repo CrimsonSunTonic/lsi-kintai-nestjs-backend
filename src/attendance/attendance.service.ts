@@ -94,6 +94,8 @@ export class AttendanceService {
     return {
       checkedIn: records.some(r => r.status === 'checkin'),
       checkedOut: records.some(r => r.status === 'checkout'),
+      lunchIn: records.some(r => r.status === 'lunchin'),
+      lunchOut: records.some(r => r.status === 'lunchout'),
     };
   }
 }

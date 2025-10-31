@@ -15,7 +15,6 @@ export class AdminController {
 
     const result = await this.adminService.create(createUserDto);
 
-    console.log('Create result:', result);
     return result;
   }
 
@@ -25,7 +24,6 @@ export class AdminController {
 
     const result = await this.adminService.findAll();
 
-    console.log('FindAll result:', result);
     return result;
   }
 
@@ -36,7 +34,6 @@ export class AdminController {
 
     const result = await this.adminService.findOne(+id);
 
-    console.log('FindOne result:', result);
     return result;
   }
 
@@ -48,7 +45,6 @@ export class AdminController {
 
     const result = await this.adminService.update(+id, updateUserDto);
 
-    console.log('Update result:', result);
     return result;
   }
 
@@ -59,7 +55,6 @@ export class AdminController {
 
     const result = await this.adminService.remove(+id);
 
-    console.log('Remove result:', result);
     return result;
   }
 }

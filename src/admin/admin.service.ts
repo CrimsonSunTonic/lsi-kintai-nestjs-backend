@@ -7,10 +7,22 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import * as argon2 from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private mailService: MailService) {}
+
+   private generateRandomPassword(length = 8): string {
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
 
   // Create a new user
   async create(createUserDto: CreateUserDto) {
@@ -18,7 +30,9 @@ export class AdminService {
     console.log('Received DTO:', createUserDto);
 
     try {
-      const hashedPassword = await argon2.hash(createUserDto.password);
+      const plainPassword = this.generateRandomPassword();
+
+      const hashedPassword = await argon2.hash(plainPassword);
       console.log('Password hashed successfully');
 
       const user = await this.prisma.user.create({
@@ -31,7 +45,12 @@ export class AdminService {
         },
       });
 
-      console.log('User created in DB:', user);
+      // Send welcome email with plain password
+      await this.mailService.sendWelcomeEmail(
+        user.email,
+        plainPassword,
+        `${user.lastname} ${user.firstname}`,
+      );
 
       return {
         message: 'User created successfully',
@@ -69,10 +88,21 @@ export class AdminService {
         createdAt: true,
         updatedAt: true,
       },
+      orderBy: [
+        { role: 'asc' },
+        { firstname: 'asc' },
+      ],
     });
 
-    console.log('Fetched users:', users);
-    return users;
+    const roleMap = {
+      ADMIN: '管理者',
+      USER: '社員',
+    };
+
+    return users.map(u => ({
+      ...u,
+      role: roleMap[u.role] || u.role,
+    }));
   }
 
   // Find one user by ID
@@ -114,8 +144,6 @@ export class AdminService {
         data: updateUserDto,
       });
 
-      console.log('User updated in DB:', user);
-
       return {
         message: 'User updated successfully',
         user: {
@@ -147,8 +175,6 @@ export class AdminService {
       const user = await this.prisma.user.delete({
         where: { id },
       });
-
-      console.log('User deleted from DB:', user);
 
       return {
         message: 'User removed successfully',
