@@ -7,6 +7,15 @@ import { GetMonthlyAttendanceDto } from './dto/get.attendance.monthly.dto';
 export class AttendanceService {
   constructor(private prisma: PrismaService) {}
 
+  private convertToJST(utcDate: Date): string {
+    // JST is UTC+9
+    const date = new Date(utcDate);
+    date.setHours(date.getHours() + 9);
+    
+    // Format as ISO string with JST timezone indicator
+    return date.toISOString().replace('Z', '+09:00');
+  }
+
   async createAttendance(userId: number, dto: CreateAttendanceDto) {
     const nowUTC = new Date(); // Current UTC time (what Prisma/Postgres expects)
     const JST_OFFSET = 9 * 60 * 60 * 1000;
@@ -35,30 +44,30 @@ export class AttendanceService {
   }
 
   async getUserAttendance(userId: number) {
-    return this.prisma.attendance.findMany({
+    const records = await this.prisma.attendance.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
+
+    return records;
   }
 
   async getMonthlyAttendance(dto: GetMonthlyAttendanceDto) {
-    // JST is UTC+9
-    const JST_OFFSET = 9 * 60 * 60 * 1000;
+    // Create start and end of month in local time (will be converted to UTC by database)
+    const startDate = new Date(dto.year, dto.month - 1, 1, 0, 0, 0, 0);
+    const endDate = new Date(dto.year, dto.month, 0, 23, 59, 59, 999);
+    // console.log("startDate is ", startDate)
 
-    // Create start and end times in JST
-    const startDateJST = new Date(dto.year, dto.month - 1, 1, 0, 0, 0, 0);
-    const endDateJST = new Date(dto.year, dto.month, 0, 23, 59, 59, 999);
-
-    // Convert to UTC for DB query (subtract JST offset)
-    const startDateUTC = new Date(startDateJST.getTime() - JST_OFFSET);
-    const endDateUTC = new Date(endDateJST.getTime() - JST_OFFSET);
+    // console.log('Querying for month:', dto.month, dto.year);
+    // console.log('Start Date (first day of month):', startDate.toISOString());
+    // console.log('End Date (last day of month):', endDate.toISOString());
 
     const records = await this.prisma.attendance.findMany({
       where: {
         userId: dto.userId,
         date: {
-          gte: startDateUTC,
-          lte: endDateUTC,
+          gte: startDate,
+          lte: endDate,
         },
       },
       orderBy: {
@@ -66,13 +75,15 @@ export class AttendanceService {
       },
     });
 
-    // Convert date fields back to JST for returning
-    const recordsWithJST = records.map((r) => ({
-      ...r,
-      date: new Date(r.date.getTime() + JST_OFFSET),
+    // Convert UTC dates to JST
+    const recordsInJST = records.map(record => ({
+      ...record,
+      date: this.convertToJST(record.date),
+      createdAt: this.convertToJST(record.createdAt),
+      updatedAt: this.convertToJST(record.updatedAt),
     }));
 
-    return recordsWithJST;
+    return recordsInJST;
   }
 
   async getTodayStatus(userId: number) {
