@@ -88,10 +88,11 @@ export class AttendanceService {
 
   async getTodayStatus(userId: number) {
     const today = new Date();
+    const japanHour = (today.getUTCHours() + 9) % 24;
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-
+    
     const records = await this.prisma.attendance.findMany({
       where: {
         userId,
@@ -102,11 +103,17 @@ export class AttendanceService {
       },
     });
 
-    return {
-      checkedIn: records.some(r => r.status === 'checkin'),
-      checkedOut: records.some(r => r.status === 'checkout'),
-      lunchIn: records.some(r => r.status === 'lunchin'),
-      lunchOut: records.some(r => r.status === 'lunchout'),
-    };
+    let lastStatus: string | null = null;
+    if (records.length > 0) {
+      lastStatus = records[records.length - 1].status;
+    }
+
+    let lunchIn = !(records.some(r => r.status === 'lunchin')) && lastStatus === 'checkin' && japanHour >= 11 && japanHour <= 14;
+    let lunchOut = !(records.some(r => r.status === 'lunchout')) && lastStatus === 'lunchin';
+
+    let checkedIn = lastStatus === 'checkout' || lastStatus === null;
+    let checkedOut = lastStatus === 'checkin' || lastStatus === 'lunchout';
+    
+    return { checkedIn, checkedOut, lunchIn, lunchOut };
   }
 }
