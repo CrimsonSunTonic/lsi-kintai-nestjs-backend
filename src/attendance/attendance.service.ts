@@ -75,15 +75,18 @@ export class AttendanceService {
       },
     });
 
+    
     // Convert UTC dates to JST
-    const recordsInJST = records.map(record => ({
+    const recordsInJST = records.map((record) => ({
       ...record,
       date: this.convertToJST(record.date),
       createdAt: this.convertToJST(record.createdAt),
       updatedAt: this.convertToJST(record.updatedAt),
     }));
 
-    return recordsInJST;
+    const recordsFomatted = handleWorkTimes(recordsInJST);
+
+    return recordsFomatted;
   }
 
   async getTodayStatus(userId: number) {
@@ -116,4 +119,75 @@ export class AttendanceService {
     
     return { checkedIn, checkedOut, lunchIn, lunchOut };
   }
+}
+
+function handleWorkTimes(recordsInJST) {
+    const recordsFormated = {};
+
+    // --- Nhóm dữ liệu ---
+    recordsInJST.forEach((rec) => {
+      const dateKey = rec.date.split("T")[0];
+      const time = rec.date.split("T")[1].slice(0, 5);
+      const loc= [rec.latitude, rec.longitude];
+
+      if (!recordsFormated[dateKey]) {
+        recordsFormated[dateKey] = {
+          checkin: [],
+          lunchin: [],
+          lunchout: [],
+          checkout: [],
+        };
+      }
+
+      switch (rec.status) {
+        case "checkin":
+          recordsFormated[dateKey].checkin.push({ time, loc });
+          break;
+        case "lunchin":
+          recordsFormated[dateKey].lunchin.push({ time, loc });
+          break;
+        case "lunchout":
+          recordsFormated[dateKey].lunchout.push({ time, loc });
+          break;
+        case "checkout":
+          recordsFormated[dateKey].checkout.push({ time, loc });
+          break;
+      }
+    });
+
+    const toMinutes = (timeStr: string): number => {
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const toHourDecimal = (minutes: number): number => {
+      return Math.round((minutes / 60) * 100) / 100; 
+    };
+
+    for (const dateKey of Object.keys(recordsFormated)) {
+      const rec = recordsFormated[dateKey];
+      let totalWorkMinutes = 0;
+
+      const pairCount = Math.min(rec.checkin.length, rec.checkout.length);
+      for (let i = 0; i < pairCount; i++) {
+        const start = toMinutes(rec.checkin[i].time);
+        const end = toMinutes(rec.checkout[i].time);
+        if (end > start) {
+          totalWorkMinutes += end - start;
+        }
+      }
+
+      const lunchCount = Math.min(rec.lunchin.length, rec.lunchout.length);
+      for (let i = 0; i < lunchCount; i++) {
+        const lunchStart = toMinutes(rec.lunchout[i].time);
+        const lunchEnd = toMinutes(rec.lunchin[i].time);
+        if (lunchStart > lunchEnd) {
+          totalWorkMinutes -= lunchStart - lunchEnd;
+        }
+      }
+
+      rec.workingHours = toHourDecimal(totalWorkMinutes / 60);
+    }
+
+    return recordsFormated;
 }
