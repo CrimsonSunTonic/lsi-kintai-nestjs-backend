@@ -122,72 +122,79 @@ export class AttendanceService {
 }
 
 function handleWorkTimes(recordsInJST) {
-    const recordsFormated = {};
+  const recordsFormated = {};
 
-    // --- Nhóm dữ liệu ---
-    recordsInJST.forEach((rec) => {
-      const dateKey = rec.date.split("T")[0];
-      const time = rec.date.split("T")[1].slice(0, 5);
-      const loc= [rec.latitude, rec.longitude];
+  // --- Nhóm dữ liệu ---
+  recordsInJST.forEach((rec) => {
+    const dateKey = rec.date.split("T")[0];
+    const time = rec.date.split("T")[1].slice(0, 5);
+    const loc = [rec.latitude, rec.longitude];
 
-      if (!recordsFormated[dateKey]) {
-        recordsFormated[dateKey] = {
-          checkin: [],
-          lunchin: [],
-          lunchout: [],
-          checkout: [],
-        };
-      }
-
-      switch (rec.status) {
-        case "checkin":
-          recordsFormated[dateKey].checkin.push({ time, loc });
-          break;
-        case "lunchin":
-          recordsFormated[dateKey].lunchin.push({ time, loc });
-          break;
-        case "lunchout":
-          recordsFormated[dateKey].lunchout.push({ time, loc });
-          break;
-        case "checkout":
-          recordsFormated[dateKey].checkout.push({ time, loc });
-          break;
-      }
-    });
-
-    const toMinutes = (timeStr: string): number => {
-      const [h, m] = timeStr.split(":").map(Number);
-      return h * 60 + m;
-    };
-
-    const toHourDecimal = (minutes: number): number => {
-      return Math.round((minutes / 60) * 100) / 100; 
-    };
-
-    for (const dateKey of Object.keys(recordsFormated)) {
-      const rec = recordsFormated[dateKey];
-      let totalWorkMinutes = 0;
-
-      const pairCount = Math.min(rec.checkin.length, rec.checkout.length);
-      for (let i = 0; i < pairCount; i++) {
-        const start = toMinutes(rec.checkin[i].time);
-        const end = toMinutes(rec.checkout[i].time);
-        if (end > start) {
-          totalWorkMinutes += end - start;
-        }
-      }
-
-      const lunchCount = Math.min(rec.lunchin.length, rec.lunchout.length);
-      for (let i = 0; i < lunchCount; i++) {
-        const lunchStart = toMinutes(rec.lunchout[i].time);
-        const lunchEnd = toMinutes(rec.lunchin[i].time);
-        if (lunchStart > lunchEnd) {
-          totalWorkMinutes -= lunchStart - lunchEnd;
-        }
-      }
-
-      rec.workingHours = toHourDecimal(totalWorkMinutes / 60);
+    if (!recordsFormated[dateKey]) {
+      recordsFormated[dateKey] = {
+        checkin: [],
+        lunchout: [],
+        lunchin: [],
+        checkout: [],
+      };
     }
 
-    return recordsFormated;
+    switch (rec.status) {
+      case "checkin":
+        recordsFormated[dateKey].checkin.push({ time, loc });
+        break;
+      case "lunchout":
+        recordsFormated[dateKey].lunchout.push({ time, loc });
+        break;
+      case "lunchin":
+        recordsFormated[dateKey].lunchin.push({ time, loc });
+        break;
+      case "checkout":
+        recordsFormated[dateKey].checkout.push({ time, loc });
+        break;
+    }
+  });
+
+  // --- Các hàm hỗ trợ ---
+  const toMinutes = (timeStr) => {
+    const [h, m] = timeStr.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const toHourDecimal = (minutes) => {
+    return Math.round((minutes / 60) * 100) / 100;
+  };
+
+  const diffMinutes = (start, end) => {
+    // hỗ trợ nếu end < start (qua ngày hôm sau)
+    let diff = end - start;
+    if (diff < 0) diff += 24 * 60;
+    return diff;
+  };
+
+  // --- Tính giờ làm việc ---
+  for (const dateKey of Object.keys(recordsFormated)) {
+    const rec = recordsFormated[dateKey];
+    let totalWorkMinutes = 0;
+
+    const pairCount = Math.min(rec.checkin.length, rec.checkout.length);
+    for (let i = 0; i < pairCount; i++) {
+      const start = toMinutes(rec.checkin[i].time);
+      const end = toMinutes(rec.checkout[i].time);
+      totalWorkMinutes += diffMinutes(start, end);
+    }
+
+    // --- Trừ giờ nghỉ trưa ---
+    const lunchCount = Math.min(rec.lunchout.length, rec.lunchin.length);
+    for (let i = 0; i < lunchCount; i++) {
+      const start = toMinutes(rec.lunchout[i].time);
+      const end = toMinutes(rec.lunchin[i].time);
+      const lunchDiff = diffMinutes(start, end);
+      totalWorkMinutes -= lunchDiff;
+    }
+
+    rec.workingHours = toHourDecimal(totalWorkMinutes);
+  }
+
+  return recordsFormated;
 }
