@@ -3,6 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAttendanceDto } from './dto';
 import { GetMonthlyAttendanceDto } from './dto/get.attendance.monthly.dto';
 
+enum AttendanceStatus {
+  checkedIn = 'checkin',
+  lunchOut = 'lunchout',
+  lunchIn = 'lunchin',
+  checkedOut = 'checkout',
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(private prisma: PrismaService) {}
@@ -11,12 +18,22 @@ export class AttendanceService {
     // JST is UTC+9
     const date = new Date(utcDate);
     date.setHours(date.getHours() + 9);
-    
     // Format as ISO string with JST timezone indicator
     return date.toISOString().replace('Z', '+09:00');
   }
 
   async createAttendance(userId: number, dto: CreateAttendanceDto) {
+    // Check if the button status is true before saving
+    const statusCheck = await this.getTodayStatus(userId);
+    
+    const status = (Object.keys(AttendanceStatus) as (keyof typeof AttendanceStatus)[]).find(k => AttendanceStatus[k] === dto.status) || "";
+    if (!statusCheck[status]) {
+      throw new HttpException(
+        `Cannot save status "${dto.status}" because the button is not enabled.`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
     const nowUTC = new Date(); // Current UTC time (what Prisma/Postgres expects)
     const JST_OFFSET = 9 * 60 * 60 * 1000;
     const DateJST = new Date(nowUTC.getTime() + JST_OFFSET); // Convert to JST for returning
@@ -56,11 +73,6 @@ export class AttendanceService {
     // Create start and end of month in local time (will be converted to UTC by database)
     const startDate = new Date(dto.year, dto.month - 1, 1, 0, 0, 0, 0);
     const endDate = new Date(dto.year, dto.month, 0, 23, 59, 59, 999);
-    // console.log("startDate is ", startDate)
-
-    // console.log('Querying for month:', dto.month, dto.year);
-    // console.log('Start Date (first day of month):', startDate.toISOString());
-    // console.log('End Date (last day of month):', endDate.toISOString());
 
     const records = await this.prisma.attendance.findMany({
       where: {
@@ -75,7 +87,6 @@ export class AttendanceService {
       },
     });
 
-    
     // Convert UTC dates to JST
     const recordsInJST = records.map((record) => ({
       ...record,
@@ -95,7 +106,7 @@ export class AttendanceService {
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    
+
     const records = await this.prisma.attendance.findMany({
       where: {
         userId,
@@ -111,20 +122,22 @@ export class AttendanceService {
       lastStatus = records[records.length - 1].status;
     }
 
+    // Calculate button states for frontend
     let lunchIn = !(records.some(r => r.status === 'lunchin')) && lastStatus === 'checkin' && japanHour >= 11 && japanHour <= 14;
     let lunchOut = !(records.some(r => r.status === 'lunchout')) && lastStatus === 'lunchin';
 
     let checkedIn = lastStatus === 'checkout' || lastStatus === null;
-    let checkedOut = lastStatus === 'checkin' || lastStatus === 'lunchout';
-    
+    let checkedOut = lastStatus === 'checkin' || lastStatus === 'lunchout';    
+
     return { checkedIn, checkedOut, lunchIn, lunchOut };
   }
 }
 
+// Format work times and group records by date
 function handleWorkTimes(recordsInJST) {
   const recordsFormated = {};
 
-  // --- Nhóm dữ liệu ---
+  // --- Group data by date ---
   recordsInJST.forEach((rec) => {
     const dateKey = rec.date.split("T")[0];
     const time = rec.date.split("T")[1].slice(0, 5);
@@ -155,7 +168,7 @@ function handleWorkTimes(recordsInJST) {
     }
   });
 
-  // --- Các hàm hỗ trợ ---
+  // --- Helper functions ---
   const toMinutes = (timeStr) => {
     const [h, m] = timeStr.split(":").map(Number);
     return h * 60 + m;
@@ -166,13 +179,13 @@ function handleWorkTimes(recordsInJST) {
   };
 
   const diffMinutes = (start, end) => {
-    // hỗ trợ nếu end < start (qua ngày hôm sau)
+    // Support for end < start (next day)
     let diff = end - start;
     if (diff < 0) diff += 24 * 60;
     return diff;
   };
 
-  // --- Tính giờ làm việc ---
+  // --- Calculate working hours ---
   for (const dateKey of Object.keys(recordsFormated)) {
     const rec = recordsFormated[dateKey];
     let totalWorkMinutes = 0;
@@ -184,7 +197,7 @@ function handleWorkTimes(recordsInJST) {
       totalWorkMinutes += diffMinutes(start, end);
     }
 
-    // --- Trừ giờ nghỉ trưa ---
+    // --- Subtract lunch break time ---
     const lunchCount = Math.min(rec.lunchout.length, rec.lunchin.length);
     for (let i = 0; i < lunchCount; i++) {
       const start = toMinutes(rec.lunchout[i].time);
