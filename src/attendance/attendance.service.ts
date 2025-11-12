@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAttendanceDto } from './dto';
 import { GetMonthlyAttendanceDto } from './dto/get.attendance.monthly.dto';
+import * as moment from 'moment-timezone';
 
 enum AttendanceStatus {
   checkedIn = 'checkin',
@@ -101,20 +102,24 @@ export class AttendanceService {
   }
 
   async getTodayStatus(userId: number) {
-    const today = new Date();
-    const japanHour = (today.getUTCHours() + 9) % 24;
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+    const jstNow = moment.tz('Asia/Tokyo');
+    const japanHour = jstNow.hour();
+
+    const startOfDayJST = jstNow.clone().startOf('day');
+    const endOfDayJST = jstNow.clone().endOf('day');
+
+    const startUTC = startOfDayJST.clone().tz('UTC').toDate();
+    const endUTC = endOfDayJST.clone().tz('UTC').toDate();
 
     const records = await this.prisma.attendance.findMany({
       where: {
         userId,
         date: {
-          gte: today,
-          lt: tomorrow,
+          gte: startUTC,
+          lt: endUTC,
         },
       },
+      orderBy: { date: 'asc' },
     });
 
     let lastStatus: string | null = null;
@@ -122,15 +127,22 @@ export class AttendanceService {
       lastStatus = records[records.length - 1].status;
     }
 
-    // Calculate button states for frontend
-    let lunchIn = !(records.some(r => r.status === 'lunchin')) && lastStatus === 'checkin' && japanHour >= 11 && japanHour <= 14;
-    let lunchOut = !(records.some(r => r.status === 'lunchout')) && lastStatus === 'lunchin';
+    const lunchIn =
+      !records.some((r) => r.status === 'lunchin') &&
+      lastStatus === 'checkin' &&
+      japanHour >= 11 &&
+      japanHour <= 14;
 
-    let checkedIn = lastStatus === 'checkout' || lastStatus === null;
-    let checkedOut = lastStatus === 'checkin' || lastStatus === 'lunchout';    
+    const lunchOut =
+      !records.some((r) => r.status === 'lunchout') &&
+      lastStatus === 'lunchin';
+
+    const checkedIn = lastStatus === 'checkout' || lastStatus === null;
+    const checkedOut = lastStatus === 'checkin' || lastStatus === 'lunchout';
 
     return { checkedIn, checkedOut, lunchIn, lunchOut };
   }
+
 }
 
 // Format work times and group records by date
