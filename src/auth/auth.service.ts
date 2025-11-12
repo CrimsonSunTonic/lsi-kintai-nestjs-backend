@@ -104,6 +104,7 @@ export class AuthService {
             where: { id: userId },
         });
 
+        // Check exists user
         if (!user) {
             throw new ForbiddenException('User not found');
         }
