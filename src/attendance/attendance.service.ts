@@ -147,9 +147,52 @@ export class AttendanceService {
 
 // Format work times and group records by date
 function handleWorkTimes(recordsInJST) {
-  const recordsFormated = {};
+  const recordsFormated: any = {};
 
-  // --- Group data by date ---
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const shifts = [
+    { name: "main", start: "09:00", end: "18:00" },
+    { name: "ot1", start: "18:30", end: "22:00" },
+    { name: "ot2", start: "22:30", end: "27:00" },
+  ];
+
+  const defaultBreaks = [
+    { start: "12:00", end: "13:00" }, // trừ nếu không có lunch
+    { start: "18:00", end: "18:30" },
+    { start: "22:00", end: "22:30" },
+  ];
+
+  const getOverlapMinutes = (
+    work: { start: number; end: number },
+    shift: { start: string; end: string },
+    breaks: { start: number; end: number }[]
+  ) => {
+    let sStart = toMinutes(shift.start);
+    let sEnd = toMinutes(shift.end);
+    if (sEnd < sStart) sEnd += 1440;
+
+    let start = Math.max(work.start, sStart);
+    let end = Math.min(work.end, sEnd);
+    if (end <= start) return 0;
+
+    let total = end - start;
+
+    for (const b of breaks) {
+      const overlap = Math.max(
+        0,
+        Math.min(end, b.end) - Math.max(start, b.start)
+      );
+      total -= overlap;
+    }
+
+    return total;
+  };
+
+  // --- Group by date ---
   recordsInJST.forEach((rec) => {
     const dateKey = rec.date.split("T")[0];
     const time = rec.date.split("T")[1].slice(0, 5);
@@ -158,67 +201,78 @@ function handleWorkTimes(recordsInJST) {
     if (!recordsFormated[dateKey]) {
       recordsFormated[dateKey] = {
         checkin: [],
-        lunchout: [],
-        lunchin: [],
         checkout: [],
+        lunchin: [],
+        lunchout: [],
+        workingDetail: {},
       };
+      shifts.forEach((s) => (recordsFormated[dateKey].workingDetail[s.name] = 0));
     }
 
     switch (rec.status) {
       case "checkin":
         recordsFormated[dateKey].checkin.push({ time, loc });
         break;
-      case "lunchout":
-        recordsFormated[dateKey].lunchout.push({ time, loc });
+      case "checkout":
+        recordsFormated[dateKey].checkout.push({ time, loc });
         break;
       case "lunchin":
         recordsFormated[dateKey].lunchin.push({ time, loc });
         break;
-      case "checkout":
-        recordsFormated[dateKey].checkout.push({ time, loc });
+      case "lunchout":
+        recordsFormated[dateKey].lunchout.push({ time, loc });
         break;
     }
   });
 
-  // --- Helper functions ---
-  const toMinutes = (timeStr) => {
-    const [h, m] = timeStr.split(":").map(Number);
-    return h * 60 + m;
-  };
-
-  const toHourDecimal = (minutes) => {
-    return Math.round((minutes / 60) * 100) / 100;
-  };
-
-  const diffMinutes = (start, end) => {
-    // Support for end < start (next day)
-    let diff = end - start;
-    if (diff < 0) diff += 24 * 60;
-    return diff;
-  };
-
-  // --- Calculate working hours ---
   for (const dateKey of Object.keys(recordsFormated)) {
     const rec = recordsFormated[dateKey];
-    let totalWorkMinutes = 0;
 
-    const pairCount = Math.min(rec.checkin.length, rec.checkout.length);
-    for (let i = 0; i < pairCount; i++) {
-      const start = toMinutes(rec.checkin[i].time);
-      const end = toMinutes(rec.checkout[i].time);
-      totalWorkMinutes += diffMinutes(start, end);
+    const nCheckin = rec.checkin.length;
+    const nCheckout = rec.checkout.length;
+    const pairs: { start: number; end: number }[] = [];
+
+    // Ghép checkin → checkout, bỏ checkin không có checkout
+    for (let i = 0; i < nCheckin && i < nCheckout; i++) {
+      let start = toMinutes(rec.checkin[i].time);
+      let end = toMinutes(rec.checkout[i].time);
+      if (end < start) end += 1440;
+      pairs.push({ start, end });
     }
 
-    // --- Subtract lunch break time ---
-    const lunchCount = Math.min(rec.lunchout.length, rec.lunchin.length);
-    for (let i = 0; i < lunchCount; i++) {
-      const start = toMinutes(rec.lunchout[i].time);
-      const end = toMinutes(rec.lunchin[i].time);
-      const lunchDiff = diffMinutes(start, end);
-      totalWorkMinutes -= lunchDiff;
+    // Lunch breaks
+    const lunchBreaks: { start: number; end: number }[] = [];
+    const nLunch = Math.min(rec.lunchin.length, rec.lunchout.length);
+    for (let i = 0; i < nLunch; i++) {
+      let lStart = toMinutes(rec.lunchin[i].time);
+      let lEnd = toMinutes(rec.lunchout[i].time);
+      if (lEnd < lStart) lEnd += 1440;
+      pairs.forEach((p) => {
+        if (lEnd > p.start && lStart < p.end) {
+          lunchBreaks.push({
+            start: Math.max(lStart, p.start),
+            end: Math.min(lEnd, p.end),
+          });
+        }
+      });
     }
 
-    rec.workingHours = toHourDecimal(totalWorkMinutes);
+    // Thêm default breaks nhưng **bỏ break 12:00–13:00 nếu có lunch**
+    defaultBreaks.forEach((b) => {
+      if (b.start === "12:00" && nLunch > 0) return;
+      lunchBreaks.push({ start: toMinutes(b.start), end: toMinutes(b.end) });
+    });
+
+    // Tính giờ từng pair
+    for (const pair of pairs) {
+      for (const s of shifts) {
+        rec.workingDetail[s.name] += getOverlapMinutes(pair, s, lunchBreaks);
+      }
+    }
+
+    for (const s of shifts) {
+      rec.workingDetail[s.name] = +(rec.workingDetail[s.name] / 60).toFixed(1);
+    }
   }
 
   return recordsFormated;
