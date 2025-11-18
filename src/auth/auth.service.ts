@@ -64,7 +64,7 @@ export class AuthService {
 
         //If user does not exist, throw exception
         if (!user) {
-            throw new ForbiddenException('Credentials incorrect: email');
+            throw new ForbiddenException('メールアドレスまたはパスワードが違います！！！');
         }
 
         //Compare password
@@ -75,7 +75,7 @@ export class AuthService {
 
         //If password incorrect, throw exception
         if (!pwMatches) {
-            throw new ForbiddenException('Credentials incorrect: password');
+            throw new ForbiddenException('メールアドレスまたはパスワードが違います！！！');
         }
 
         //Send back the user sign token
