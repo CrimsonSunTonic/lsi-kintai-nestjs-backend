@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAttendanceDto } from './dto';
+import { CreateAttendanceDto, UpdateAttendanceMonthlyDto } from './dto';
 import { GetMonthlyAttendanceDto } from './dto/get.attendance.monthly.dto';
 import * as moment from 'moment-timezone';
 
@@ -21,44 +21,6 @@ export class AttendanceService {
     date.setHours(date.getHours() + 9);
     // Format as ISO string with JST timezone indicator
     return date.toISOString().replace('Z', '+09:00');
-  }
-
-  async createAttendance(userId: number, dto: CreateAttendanceDto) {
-    // Check if the button status is true before saving
-    const statusCheck = await this.getTodayStatus(userId);
-    
-    const status = (Object.keys(AttendanceStatus) as (keyof typeof AttendanceStatus)[]).find(k => AttendanceStatus[k] === dto.status) || "";
-    if (!statusCheck[status]) {
-      throw new HttpException(
-        `Cannot save status "${dto.status}" because the button is not enabled.`,
-        HttpStatus.BAD_REQUEST
-      );
-    }
-
-    const nowUTC = new Date(); // Current UTC time (what Prisma/Postgres expects)
-    const JST_OFFSET = 9 * 60 * 60 * 1000;
-    const DateJST = new Date(nowUTC.getTime() + JST_OFFSET); // Convert to JST for returning
-
-    // Save UTC timestamp
-    const savedRecord = await this.prisma.attendance.create({
-      data: {
-        userId,
-        date: nowUTC,
-        status: dto.status,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-      },
-    });
-
-    return {
-      message: "Attendance recorded successfully",
-      id: savedRecord.id,
-      userId: savedRecord.userId,
-      status: savedRecord.status,
-      latitude: savedRecord.latitude,
-      longitude: savedRecord.longitude,
-      date: DateJST,
-    };
   }
 
   async getUserAttendance(userId: number) {
@@ -131,7 +93,7 @@ export class AttendanceService {
       !records.some((r) => r.status === 'lunchin') &&
       lastStatus === 'checkin' &&
       japanHour >= 11 &&
-      japanHour <= 14;
+      japanHour <= 13;
 
     const lunchOut =
       !records.some((r) => r.status === 'lunchout') &&
@@ -143,6 +105,56 @@ export class AttendanceService {
     return { checkedIn, checkedOut, lunchIn, lunchOut };
   }
 
+  async createAttendance(userId: number, dto: CreateAttendanceDto) {
+    // Check if the button status is true before saving
+    const statusCheck = await this.getTodayStatus(userId);
+    
+    const status = (Object.keys(AttendanceStatus) as (keyof typeof AttendanceStatus)[]).find(k => AttendanceStatus[k] === dto.status) || "";
+    if (!statusCheck[status]) {
+      throw new HttpException(
+        `Cannot save status "${dto.status}" because the button is not enabled.`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const nowUTC = new Date(); // Current UTC time (what Prisma/Postgres expects)
+    const JST_OFFSET = 9 * 60 * 60 * 1000;
+    const DateJST = new Date(nowUTC.getTime() + JST_OFFSET); // Convert to JST for returning
+
+    // Save UTC timestamp
+    const savedRecord = await this.prisma.attendance.create({
+      data: {
+        userId,
+        date: nowUTC,
+        status: dto.status,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+      },
+    });
+
+    return {
+      message: "Attendance recorded successfully",
+      id: savedRecord.id,
+      userId: savedRecord.userId,
+      status: savedRecord.status,
+      latitude: savedRecord.latitude,
+      longitude: savedRecord.longitude,
+      date: DateJST,
+    };
+  }
+
+  async updateAttendanceMonthlyById(attendanceId: number, dto: UpdateAttendanceMonthlyDto) {
+    // Save UTC timestamp
+    const savedRecord = await this.prisma.attendance.update({
+        where: { id: attendanceId },
+        data: dto,
+      });
+
+    return {
+      message: "Attendance recorded successfully",
+      savedRecord
+    };
+  }
 }
 
 // Format work times and group records by date
@@ -204,23 +216,23 @@ function handleWorkTimes(recordsInJST) {
         checkout: [],
         lunchin: [],
         lunchout: [],
-        workingDetail: {},
+        workingHours: {},
       };
-      shifts.forEach((s) => (recordsFormated[dateKey].workingDetail[s.name] = 0));
+      shifts.forEach((s) => (recordsFormated[dateKey].workingHours[s.name] = 0));
     }
 
     switch (rec.status) {
       case "checkin":
-        recordsFormated[dateKey].checkin.push({ time, loc });
+        recordsFormated[dateKey].checkin.push({ id: rec.id, time, loc });
         break;
       case "checkout":
-        recordsFormated[dateKey].checkout.push({ time, loc });
+        recordsFormated[dateKey].checkout.push({ id: rec.id, time, loc });
         break;
       case "lunchin":
-        recordsFormated[dateKey].lunchin.push({ time, loc });
+        recordsFormated[dateKey].lunchin.push({ id: rec.id, time, loc });
         break;
       case "lunchout":
-        recordsFormated[dateKey].lunchout.push({ time, loc });
+        recordsFormated[dateKey].lunchout.push({ id: rec.id, time, loc });
         break;
     }
   });
@@ -266,12 +278,12 @@ function handleWorkTimes(recordsInJST) {
     // Tính giờ từng pair
     for (const pair of pairs) {
       for (const s of shifts) {
-        rec.workingDetail[s.name] += getOverlapMinutes(pair, s, lunchBreaks);
+        rec.workingHours[s.name] += getOverlapMinutes(pair, s, lunchBreaks);
       }
     }
 
     for (const s of shifts) {
-      rec.workingDetail[s.name] = +(rec.workingDetail[s.name] / 60).toFixed(1);
+      rec.workingHours[s.name] = +(rec.workingHours[s.name] / 60).toFixed(1);
     }
   }
 

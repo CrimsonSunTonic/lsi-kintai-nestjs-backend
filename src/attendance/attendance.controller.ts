@@ -1,8 +1,8 @@
-import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus, ForbiddenException, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus, ForbiddenException, Req, Patch } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { JwtGuard } from '../auth/guard';
 import { GetUser } from '../auth/decorator';
-import { CreateAttendanceDto } from './dto';
+import { CreateAttendanceDto, UpdateAttendanceMonthlyDto } from './dto';
 import { GetMonthlyAttendanceDto } from './dto/get.attendance.monthly.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiForbiddenResponse } from '@nestjs/swagger';
 
@@ -12,17 +12,6 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiForbiddenResponse
 @Controller('attendance')
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
-
-  @HttpCode(HttpStatus.OK)
-  @Post()
-  @ApiOperation({ summary: 'Create attendance record' })
-  @ApiResponse({ status: 200, description: 'Attendance record created' })
-  async create(
-    @GetUser('id') userId: number,
-    @Body() dto: CreateAttendanceDto,
-  ) {
-    return this.attendanceService.createAttendance(userId, dto);
-  }
 
   @HttpCode(HttpStatus.OK)
   @Get('me')
@@ -53,5 +42,24 @@ export class AttendanceController {
   async getTodayStatus(@Req() req) {
     const userId = req.user.id;
     return this.attendanceService.getTodayStatus(userId);
+  }
+  
+  @HttpCode(HttpStatus.OK)
+  @Post()
+  @ApiOperation({ summary: 'Create attendance record' })
+  @ApiResponse({ status: 200, description: 'Attendance record created' })
+  async create(
+    @GetUser('id') userId: number,
+    @Body() dto: CreateAttendanceDto,
+  ) {
+    return this.attendanceService.createAttendance(userId, dto);
+  }
+  
+  @Patch('update-monthly')
+  @ApiOperation({ summary: 'Update attendance monthly by ID' })
+  @ApiResponse({ status: 200, description: 'Attendance monthly record updated' })
+  async update(@Body() dto: UpdateAttendanceMonthlyDto) {
+    const result = await this.attendanceService.updateAttendanceMonthlyById(dto.id, dto);
+    return result;
   }
 }
